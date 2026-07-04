@@ -25,7 +25,7 @@ exports.processCheckout = async (req, res) => {
 
     const id = orderId || 'ORD-' + Date.now();
     const itemsJson = JSON.stringify(items);
-    const orderStatus = 'Menunggu Pembayaran';
+    const orderStatus = req.body.status || 'Menunggu Pembayaran';
 
     // 1. Simpan order ke database MySQL
     const insertQuery = `
