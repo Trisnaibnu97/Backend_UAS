@@ -73,6 +73,37 @@ async function initDatabase() {
         console.log(`✅ Berhasil memasukkan ${products.length} produk ke database Railway!`);
       }
     }
+
+    // 4. Buat tabel users
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(150) NOT NULL,
+        email VARCHAR(150) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        role VARCHAR(50) DEFAULT 'Pelanggan',
+        status VARCHAR(50) DEFAULT 'Aktif',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+
+    // 5. Cek apakah tabel users kosong
+    const [userRows] = await pool.query('SELECT COUNT(*) as cnt FROM users');
+    if (userRows[0].cnt === 0) {
+      const defaultUsers = [
+        ['Administrator Utama', 'admin@bangibshop.com', 'admin123', 'Admin', 'Aktif'],
+        ['Trisna Ibnu (Tester)', 'tester@bangibshop.com', 'password123', 'Pelanggan', 'Aktif'],
+        ['Budi Santoso', 'budi@gmail.com', 'user123', 'Pelanggan', 'Aktif'],
+        ['Siti Aminah', 'siti@yahoo.com', 'user123', 'Pelanggan', 'Aktif']
+      ];
+      for (const u of defaultUsers) {
+        await pool.query(
+          'INSERT INTO users (name, email, password, role, status) VALUES (?, ?, ?, ?, ?)',
+          u
+        );
+      }
+      console.log('✅ Berhasil memasukkan 4 user default ke database Railway!');
+    }
   } catch (err) {
     console.error('⚠️ Gagal inisialisasi tabel otomatis:', err.message);
   }
