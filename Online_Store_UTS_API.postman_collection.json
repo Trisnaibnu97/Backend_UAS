@@ -1,14 +1,14 @@
 {
   "info": {
     "_postman_id": "c8f1a2b3-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
-    "name": "Online Store UTS API (Tektok Shop)",
+    "name": "Online Store UTS API (Tektok Shop - Railway & Local)",
     "description": "Koleksi API lengkap untuk tugas UTS Web 2 Online Store (Backend Node.js + Express + MySQL + WhatsApp Fonnte Notification).\n\nDibuat oleh: Trisna Ibnu M",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     {
       "key": "base_url",
-      "value": "http://localhost:5000",
+      "value": "https://trisnaibnu-uas-web2-production.up.railway.app",
       "type": "string"
     }
   ],
@@ -27,7 +27,114 @@
       }
     },
     {
-      "name": "1. Products API",
+      "name": "1. Users & Auth API (Baru)",
+      "item": [
+        {
+          "name": "Register User Baru",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Trisna Ibnu M\",\n  \"email\": \"user_test@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"Pelanggan\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "register"]
+            },
+            "description": "Mendaftarkan user baru ke database MySQL Railway"
+          }
+        },
+        {
+          "name": "Login User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user_test@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "login"]
+            },
+            "description": "Verifikasi login user dan mengembalikan data akun serta role"
+          }
+        },
+        {
+          "name": "Get Semua User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users"]
+            },
+            "description": "Mengambil semua daftar user dan admin dari database"
+          }
+        },
+        {
+          "name": "Update Role User (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"Admin\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/user_test@example.com/role",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "user_test@example.com", "role"]
+            },
+            "description": "Mengubah role akun user menjadi Admin atau Pelanggan"
+          }
+        },
+        {
+          "name": "Reset Password User (Admin/Forgot)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"newpassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/user_test@example.com/password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "user_test@example.com", "password"]
+            },
+            "description": "Memperbarui password user di database MySQL"
+          }
+        },
+        {
+          "name": "Delete User (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/user_test@example.com",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", "user_test@example.com"]
+            },
+            "description": "Menghapus akun user dari database"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Products API",
       "item": [
         {
           "name": "Get Daftar Kategori Unik",
@@ -146,7 +253,7 @@
       ]
     },
     {
-      "name": "2. Checkout & WA Notification API",
+      "name": "3. Checkout & WA Notification API",
       "item": [
         {
           "name": "Process Checkout (Forward WA Owner)",
@@ -170,7 +277,7 @@
       ]
     },
     {
-      "name": "3. Orders API",
+      "name": "4. Orders API",
       "item": [
         {
           "name": "Get Semua Pesanan",
