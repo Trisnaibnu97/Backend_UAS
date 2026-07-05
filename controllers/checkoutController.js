@@ -23,9 +23,10 @@ exports.processCheckout = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Keranjang belanja kosong' });
     }
 
-    const id = orderId || 'ORD-' + Date.now();
+    const id = orderId || req.body.id || req.body.transactionId || 'ORD-' + Date.now();
     const itemsJson = JSON.stringify(items);
     const orderStatus = req.body.status || 'Menunggu Pembayaran';
+    const payMethod = paymentMethod || req.body.payment || 'Belum dipilih';
 
     // 1. Simpan order ke database MySQL
     const insertQuery = `
@@ -49,7 +50,7 @@ exports.processCheckout = async (req, res) => {
       shippingCost || 0,
       shippingLabel || '',
       total || 0,
-      paymentMethod || 'Belum dipilih',
+      payMethod,
       orderStatus
     ]);
 
