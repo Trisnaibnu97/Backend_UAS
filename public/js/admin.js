@@ -6,8 +6,28 @@ const Admin = {
   isLoggedIn() {
     return localStorage.getItem('tektok_admin') === 'true';
   },
-  login(email, password) {
+  async login(email, password) {
     if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
+      localStorage.setItem('tektok_admin', 'true');
+      return true;
+    }
+    try {
+      const res = await fetch(`${Utils.API_BASE_URL}/users/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.data.role === 'Admin') {
+        localStorage.setItem('tektok_admin', 'true');
+        return true;
+      }
+    } catch (err) {
+      console.warn('⚡ API Backend offline untuk admin login, gunakan localStorage.');
+    }
+    const users = this.getUsers();
+    const adminUser = users.find(u => u.email === email && u.password === password && u.role === 'Admin');
+    if (adminUser) {
       localStorage.setItem('tektok_admin', 'true');
       return true;
     }
@@ -20,6 +40,28 @@ const Admin = {
   requireAuth() {
     if (!this.isLoggedIn()) { window.location.href = 'admin-login.html'; return false; }
     return true;
+  },
+
+  // Users Management
+  getUsers() {
+    let users = JSON.parse(localStorage.getItem('tektok_users') || 'null');
+    if (!users || !users.length) {
+      users = [
+        { name: 'Administrator Utama', email: 'admin@bangibshop.com', password: 'admin123', role: 'Admin', status: 'Aktif' },
+        { name: 'Trisna Ibnu (Tester)', email: 'tester@bangibshop.com', password: 'password123', role: 'Pelanggan', status: 'Aktif' },
+        { name: 'Budi Santoso', email: 'budi@gmail.com', password: 'user123', role: 'Pelanggan', status: 'Aktif' },
+        { name: 'Siti Aminah', email: 'siti@yahoo.com', password: 'user123', role: 'Pelanggan', status: 'Aktif' }
+      ];
+      localStorage.setItem('tektok_users', JSON.stringify(users));
+    }
+    if (!users.find(u => u.email === 'admin@bangibshop.com')) {
+      users.unshift({ name: 'Administrator Utama', email: 'admin@bangibshop.com', password: 'admin123', role: 'Admin', status: 'Aktif' });
+      localStorage.setItem('tektok_users', JSON.stringify(users));
+    }
+    return users;
+  },
+  saveUsers(users) {
+    localStorage.setItem('tektok_users', JSON.stringify(users));
   },
 
   // Orders
@@ -359,13 +401,28 @@ async function initAdmin() {
     console.warn('⚡ API Backend tidak terjangkau untuk orders admin.');
   }
 
+  // 3. Load users dari Railway API atau fallback
+  try {
+    const resUsers = await fetch(`${Utils.API_BASE_URL}/users`);
+    if (resUsers.ok) {
+      const resultUsers = await resUsers.json();
+      if (resultUsers.success && resultUsers.data) {
+        localStorage.setItem('tektok_users', JSON.stringify(resultUsers.data));
+      }
+    }
+  } catch (err) {
+    console.warn('⚡ API Backend tidak terjangkau untuk users admin.');
+  }
+
   const orders = Admin.getAllOrders();
   renderStats(orders, window._adminProducts);
   renderOrders();
   renderProductsTable();
+  renderUsersTable();
 
   document.getElementById('order-filter').addEventListener('change', e => renderOrders(e.target.value));
   document.getElementById('product-search').addEventListener('input', e => renderProductsTable(e.target.value));
+  document.getElementById('user-search')?.addEventListener('input', e => renderUsersTable(e.target.value));
   document.getElementById('dark-toggle').textContent = Utils.isDark() ? '☀️' : '🌙';
 }
 
@@ -409,6 +466,152 @@ function addCategory() {
   Utils.showToast(`Kategori '${name}' berhasil ditambahkan!`, 'success');
 }
 
+// ── USERS TAB (KELOLA USER & ADMIN) ──────────────────────────
+function renderUsersTable(search = '') {
+  let users = Admin.getUsers();
+  if (search) {
+    const q = search.toLowerCase();
+    users = users.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || (u.role || 'Pelanggan').toLowerCase().includes(q));
+  }
+
+  const tbody = document.getElementById('users-tbody');
+  if (!tbody) return;
+  if (!users.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-gray-400">Belum ada user yang terdaftar.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = users.map((u, i) => {
+    const role = u.role || 'Pelanggan';
+    const isAdmin = role === 'Admin';
+    const roleBadge = isAdmin 
+      ? `<span class="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300 px-3 py-1 rounded-full text-xs font-bold flex items-center justify-center gap-1 w-max mx-auto shadow-sm">🛡️ Administrator</span>`
+      : `<span class="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-3 py-1 rounded-full text-xs font-semibold flex items-center justify-center gap-1 w-max mx-auto">👤 Pelanggan</span>`;
+    
+    const statusBadge = `<span class="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 px-2.5 py-0.5 rounded-full text-xs font-medium">● ${u.status || 'Aktif'}</span>`;
+
+    return `
+    <tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition">
+      <td class="px-4 py-3 text-xs text-gray-400 font-mono">${i + 1}</td>
+      <td class="px-4 py-3">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-full bg-gradient-to-tr ${isAdmin ? 'from-purple-500 to-indigo-600' : 'from-green-500 to-emerald-600'} text-white flex items-center justify-center font-bold text-sm shadow-sm flex-shrink-0">
+            ${u.name.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <p class="font-bold text-gray-800 dark:text-white text-sm">${u.name}</p>
+            <p class="text-[11px] text-gray-400">${isAdmin ? 'Akses Penuh Dashboard' : 'Akun Toko Online'}</p>
+          </div>
+        </div>
+      </td>
+      <td class="px-4 py-3 font-mono text-xs text-gray-600 dark:text-gray-300">${u.email}</td>
+      <td class="px-4 py-3 text-center">${roleBadge}</td>
+      <td class="px-4 py-3 text-center">${statusBadge}</td>
+      <td class="px-4 py-3 text-center">
+        <div class="flex items-center justify-center gap-2">
+          <button onclick="toggleUserRole('${u.email}')" title="Ubah Role" class="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium transition">
+            🔄 Ubah Role
+          </button>
+          ${u.email === 'admin@bangibshop.com' ? '' : `<button onclick="deleteUser('${u.email}')" title="Hapus User" class="text-xs px-2.5 py-1 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 font-medium transition">🗑️ Hapus</button>`}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function toggleUserRole(email) {
+  if (email === 'admin@bangibshop.com') {
+    Utils.showToast('Administrator Utama tidak dapat diubah rolenya.', 'error');
+    return;
+  }
+  const users = Admin.getUsers();
+  const idx = users.findIndex(u => u.email === email);
+  if (idx > -1) {
+    const current = users[idx].role || 'Pelanggan';
+    const nextRole = current === 'Admin' ? 'Pelanggan' : 'Admin';
+    users[idx].role = nextRole;
+    Admin.saveUsers(users);
+    renderUsersTable(document.getElementById('user-search')?.value || '');
+    Utils.showToast(`Role untuk ${users[idx].name} diubah menjadi ${nextRole}!`, 'success');
+
+    try {
+      await fetch(`${Utils.API_BASE_URL}/users/${encodeURIComponent(email)}/role`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: nextRole })
+      });
+    } catch (err) {
+      console.warn('⚡ Gagal sync role user ke Railway:', err);
+    }
+  }
+}
+
+async function deleteUser(email) {
+  if (email === 'admin@bangibshop.com') {
+    Utils.showToast('Administrator Utama tidak dapat dihapus.', 'error');
+    return;
+  }
+  if (!confirm(`Hapus user dengan email ${email}?`)) return;
+  const users = Admin.getUsers().filter(u => u.email !== email);
+  Admin.saveUsers(users);
+  renderUsersTable(document.getElementById('user-search')?.value || '');
+  Utils.showToast('User berhasil dihapus', 'info');
+
+  try {
+    await fetch(`${Utils.API_BASE_URL}/users/${encodeURIComponent(email)}`, {
+      method: 'DELETE'
+    });
+  } catch (err) {
+    console.warn('⚡ Gagal hapus user di Railway:', err);
+  }
+}
+
+function openAddUserModal() {
+  const nameEl = document.getElementById('u-name');
+  const emailEl = document.getElementById('u-email');
+  const passEl = document.getElementById('u-password');
+  const roleEl = document.getElementById('u-role');
+  if (nameEl) nameEl.value = '';
+  if (emailEl) emailEl.value = '';
+  if (passEl) passEl.value = '';
+  if (roleEl) roleEl.value = 'Pelanggan';
+  document.getElementById('user-modal')?.classList.remove('hidden');
+}
+
+async function saveUser() {
+  const name = document.getElementById('u-name')?.value.trim();
+  const email = document.getElementById('u-email')?.value.trim();
+  const password = document.getElementById('u-password')?.value;
+  const role = document.getElementById('u-role')?.value || 'Pelanggan';
+
+  if (!name || !email || !password) {
+    Utils.showToast('Lengkapi semua data user.', 'error');
+    return;
+  }
+
+  const users = Admin.getUsers();
+  if (users.find(u => u.email === email)) {
+    Utils.showToast('Email sudah terdaftar di sistem.', 'error');
+    return;
+  }
+
+  users.push({ name, email, password, role, status: 'Aktif' });
+  Admin.saveUsers(users);
+  document.getElementById('user-modal')?.classList.add('hidden');
+  renderUsersTable(document.getElementById('user-search')?.value || '');
+  Utils.showToast(`User ${name} berhasil ditambahkan sebagai ${role}!`, 'success');
+
+  try {
+    await fetch(`${Utils.API_BASE_URL}/users/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password, role, status: 'Aktif' })
+    });
+  } catch (err) {
+    console.warn('⚡ Gagal simpan user baru ke Railway:', err);
+  }
+}
+
 async function syncWithRailway() {
   Utils.showToast('Menyinkronkan data dengan server cloud Railway...', 'info');
   await initAdmin();
@@ -444,17 +647,18 @@ function toggleMobileSidebar() {
 }
 
 function switchTab(tab) {
-  ['tab-orders','tab-products','tab-categories','tab-settings'].forEach(t => {
+  ['tab-orders','tab-products','tab-categories','tab-users','tab-settings'].forEach(t => {
     const el = document.getElementById(t);
     if (el) el.classList.toggle('hidden', t !== `tab-${tab}`);
   });
-  ['btn-orders','btn-products','btn-categories','btn-settings'].forEach(b => {
+  ['btn-orders','btn-products','btn-categories','btn-users','btn-settings'].forEach(b => {
     const el = document.getElementById(b);
     if (!el) return;
     const active = b === `btn-${tab}`;
     el.className = `w-full text-left px-4 py-3 rounded-xl font-semibold text-sm transition flex items-center gap-3 ${active ? 'bg-green-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`;
   });
   if (tab === 'categories') renderCategories();
+  if (tab === 'users') renderUsersTable();
   if (window.innerWidth < 768) {
     const drawer = document.getElementById('sidebar-drawer');
     const backdrop = document.getElementById('mobile-sidebar-backdrop');
