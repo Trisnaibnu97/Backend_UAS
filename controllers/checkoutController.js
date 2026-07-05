@@ -77,7 +77,7 @@ exports.processCheckout = async (req, res) => {
 
     // 3. Kirim ke WhatsApp Owner menggunakan Fonnte API
     const FONNTE_TOKEN = process.env.FONNTE_TOKEN;
-    const ADMIN_WA = process.env.ADMIN_WA;
+    const ADMIN_WA = process.env.ADMIN_WA || '087713726230';
 
     let waResult = { sent: false, message: 'Notifikasi WA dilewati (token tidak diatur)' };
 
