@@ -100,3 +100,25 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({ success: false, message: 'Gagal menghapus user di server.' });
   }
 };
+
+// Reset / Update password user
+exports.updateUserPassword = async (req, res) => {
+  try {
+    const { email } = req.params;
+    const { password } = req.body;
+
+    if (!password || password.length < 6) {
+      return res.status(400).json({ success: false, message: 'Password baru minimal 6 karakter.' });
+    }
+
+    const [result] = await pool.query('UPDATE users SET password = ? WHERE email = ?', [password, email]);
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'User tidak ditemukan.' });
+    }
+
+    res.json({ success: true, message: `Password untuk ${email} berhasil direset!` });
+  } catch (err) {
+    console.error('Error updateUserPassword:', err);
+    res.status(500).json({ success: false, message: 'Gagal mereset password di server.' });
+  }
+};

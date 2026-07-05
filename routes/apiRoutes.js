@@ -13,6 +13,7 @@ router.get('/users', userController.getAllUsers);
 router.post('/users/register', userController.registerUser);
 router.post('/users/login', userController.loginUser);
 router.put('/users/:email/role', userController.updateUserRole);
+router.put('/users/:email/password', userController.updateUserPassword);
 router.delete('/users/:email', userController.deleteUser);
 
 // ==========================================
